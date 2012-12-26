@@ -1,0 +1,184 @@
+NAME
+    Process::Govern - Run child process and govern its various aspects
+
+VERSION
+    version 0.01
+
+SYNOPSIS
+    Use command-line utility:
+
+     % govproc \
+           --timeout 3600 \
+           --log-stderr-dir        /var/log/myapp/ \
+           --log-stderr-size       16M \
+           --log-stderr-histories  12 \
+       /path/to/myapp
+
+    Use directly as Perl module:
+
+     use Process::Govern qw(govern_process);
+     govern_process(
+         name       => 'myapp',
+         command    => '/path/to/myapp',
+         timeout    => 3600,
+         stderr_log => {
+             dir       => '/var/log/myapp',
+             size      => '16M',
+             histories => 12,
+         },
+     );
+
+DESCRIPTION
+    Process::Govern is a process manager. It is designed in the spirit of
+    Perinci::Sub::Wrapper, that is, a single wrapper (parent process) that
+    manages various aspects of the "wrapee" (child process).
+
+    It comes with a command-line interface, govproc.
+
+    Background story: I first created this module to record STDERR output of
+    scripts that I run from cron. The scripts already log debugging
+    information using Log::Any to an autorotated log file (using
+    Log::Dispatch::FileRotate, via Log::Any::Adapter::Log4perl, via
+    Log::Any::App). However, when the scripts warn/die, or when the programs
+    that the scripts execute emit messages to STDERR, they do not get
+    recorded. Thus, every script is then run through govproc. From there,
+    govproc naturally gets additional features.
+
+    Currently the following governing functionalities are available:
+
+    *   execution time limit
+
+    *   logging of STDERR output
+
+    *   prevent multiple instances from running simultaneously
+
+    In the future the following features are also planned or contemplated:
+
+    *   CPU time limit
+
+    *   memory limit
+
+        With an option to autorestart if process' memory size grow out of
+        limit.
+
+    *   other resource usage limit
+
+    *   fork/start multiple process
+
+    *   autorestart on die/failure
+
+    *   set (CPU) nice level
+
+    *   set I/O nice level (scheduling priority/class)
+
+    *   loadwatch (pause when system load is too high)
+
+    *   limit STDIN input, STDOUT output?
+
+    *   trap/handle some signals for the child process?
+
+    *   set UID/GID?
+
+    *   provide daemon functionality?
+
+    *   provide network server functionality?
+
+        Inspiration: djb's tcpserver.
+
+    *   set/clean environment variables
+
+FUNCTIONS
+  govern_process(%args)
+    Run child process and govern its various aspects. It basically uses
+    IPC::Run and a loop to check various conditions during the lifetime of
+    the child process. Known arguments (required argument is marked with
+    "*"):
+
+    *   command* => STR | ARRAYREF | CODE
+
+        Program to run. Passed to IPC::Run's "start()".
+
+    *   name => STRING
+
+        Should match regex "/\A\w+\z/". Used in several ways, e.g. passed as
+        "prefix" in File::Write::Rotate's constructor as well as used as
+        name of PID file.
+
+        If not given, will be taken from command.
+
+    *   timeout => INT
+
+        Apply execution time limit, in seconds. After this time is reached,
+        process (and all its descendants) are first sent the TERM signal. If
+        after 30 seconds pass some processes still survive, they are sent
+        the KILL signal.
+
+        The killing is implemented using IPC::Run's "kill_kill()".
+
+        Upon timeout, exit code is set to 201.
+
+    *   log_stderr => HASH
+
+        Specify logging for STDERR. Logging will be done using
+        File::Write::Rotate. Known hash keys: "dir" (STR, defaults to
+        /var/log, directory, preferably absolute, where the log file(s) will
+        reside, should already exist and be writable, will be passed to
+        File::Write::Rotate's constructor), "size" (INT, also passed to
+        File::Write::Rotate's constructor), "histories" (INT, also passed to
+        File::Write::Rotate's constructor), "period" (STR, also passed to
+        File::Write::Rotate's constructor).
+
+    *   single => BOOL
+
+        If set to true, will prevent running multiple instances
+        simultaneously. Implemented using Proc::PID::File. You will also
+        have to set "pid_dir".
+
+    *   pid_dir => STR
+
+        Directory to put PID file in. Relevant if "single" is set to true.
+        Default to "/var/log".
+
+FAQ
+CAVEATS
+    Not tested on Win32.
+
+SEE ALSO
+    Process::Govern attempts (or will attempt, some day) to provide the
+    functionality (or some of the functionality) of the
+    builtins/modules/programs listed below:
+
+    *   Starting/autorestarting
+
+        djb's supervise, http://cr.yp.to/daemontools/supervise.html
+
+    *   Pausing under high system load
+
+        loadwatch
+
+        cPanel also include a program called cpuwatch.
+
+    *   Preventing multiple instances of program running simultaneously
+
+        Proc::PID::File, Sys::RunAlone
+
+    *   Execution time limit
+
+        alarm() (but alarm() cannot be used to timeout external programs
+        started by system()/backtick).
+
+        Sys::RunUntil
+
+    *   Logging
+
+        djb's multilog, http://cr.yp.to/daemontools/multilog.html
+
+AUTHOR
+    Steven Haryanto <stevenharyanto@gmail.com>
+
+COPYRIGHT AND LICENSE
+    This software is copyright (c) 2012 by Steven Haryanto.
+
+    This is free software; you can redistribute it and/or modify it under
+    the same terms as the Perl 5 programming language system itself.
+
