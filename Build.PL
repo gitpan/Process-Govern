@@ -17,13 +17,13 @@ my %module_build_args = (
     "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
   "dist_name" => "Process-Govern",
-  "dist_version" => "0.01",
+  "dist_version" => "0.02",
   "license" => "perl",
   "module_name" => "Process::Govern",
   "recommends" => {},
   "recursive_test_files" => 1,
   "requires" => {
-    "File::Write::Rotate" => "0.03",
+    "File::Write::Rotate" => "0.07",
     "IPC::Run" => "0.90",
     "Proc::PID::File" => "1.27",
     "perl" => "5.010001"
