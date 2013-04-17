@@ -2,10 +2,10 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.02
+    version 0.03
 
 SYNOPSIS
-    Use command-line utility:
+    To use via command-line (in most cases):
 
      % govproc \
            --timeout 3600 \
@@ -14,7 +14,7 @@ SYNOPSIS
            --log-stderr-histories  12 \
        /path/to/myapp
 
-    Use directly as Perl module:
+    To use directly as Perl module:
 
      use Process::Govern qw(govern_process);
      govern_process(
@@ -30,8 +30,9 @@ SYNOPSIS
 
 DESCRIPTION
     Process::Govern is a child process manager. It is meant to be a
-    convenient bundle for functionalities commonly needed when managing a
-    child process. It comes with a command-line interface, govproc.
+    convenient bundle (a single parent/monitoring process) for
+    functionalities commonly needed when managing a child process. It comes
+    with a command-line interface, govproc.
 
     Background story: I first created this module to record STDERR output of
     scripts that I run from cron. The scripts already log debugging
@@ -41,7 +42,7 @@ DESCRIPTION
     that the scripts execute emit messages to STDERR, they do not get
     recorded. Thus, every script is then run through govproc. From there,
     govproc naturally gets additional features like timeout, preventing
-    running multiple instances, only running single instance, and so on.
+    running multiple instances, and so on.
 
     Currently the following governing functionalities are available:
 
@@ -127,20 +128,34 @@ FUNCTIONS
         File::Write::Rotate's constructor), "period" (STR, also passed to
         File::Write::Rotate's constructor).
 
-    *   single => BOOL
+    *   single_instance => BOOL
 
         If set to true, will prevent running multiple instances
         simultaneously. Implemented using Proc::PID::File. You will also
-        have to set "pid_dir".
+        normally have to set "pid_dir", unless your script runs as root, in
+        which case you can use the default "/var/log".
 
-    *   pid_dir => STR
+    *   pid_dir => STR (default: /var/log)
 
         Directory to put PID file in. Relevant if "single" is set to true.
-        Default to "/var/log".
+
+    *   on_multiple_instance => STR
+
+        Can be set to 'exit' to silently exit when there is already a
+        running instance. Otherwise, will print an error message 'Program
+        <NAME> already running'.
 
 FAQ
+  Why use Process::Govern?
+    The main feature this module offers is convenience: it creates a single
+    parent process to monitor child process. This fact is more pronounced
+    when you need to monitor lots of child processes. If you use, on the
+    other hand, use separate parent/monitoring process for timeout and then
+    a separate one for CPU watching, and so on, there will potentially be a
+    lot more processes running on the system.
+
 CAVEATS
-    Not tested on Win32.
+    Not yet tested on Win32.
 
 SEE ALSO
     Process::Govern attempts (or will attempt, some day) to provide the
@@ -155,7 +170,7 @@ SEE ALSO
 
         loadwatch
 
-        cPanel also include a program called cpuwatch.
+        cPanel also includes a program called cpuwatch.
 
     *   Preventing multiple instances of program running simultaneously
 
@@ -180,7 +195,7 @@ AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2012 by Steven Haryanto.
+    This software is copyright (c) 2013 by Steven Haryanto.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.

@@ -6,7 +6,7 @@ use warnings;
 
 use Getopt::Long;
 
-our $VERSION = '0.02'; # VERSION
+our $VERSION = '0.03'; # VERSION
 
 my %opts = (
     log_stderr_size      => 10*1024*1024,
@@ -16,12 +16,16 @@ my %opts = (
 Getopt::Long::Configure("no_permute");
 GetOptions(
     "--help"                   => \$opts{help},
-    "--single"                 => \$opts{single},
+
+    "--name=s"                 => \$opts{name},
+    "--single-instance"        => \$opts{single_instance},
     "--log-stderr-dir=s"       => \$opts{log_stderr_dir},
     "--log-stderr-size=i"      => \$opts{log_stderr_size},
     "--log-stderr-histories=i" => \$opts{log_stderr_histories},
     "--log-stderr-period=s"    => \$opts{log_stderr_period},
     "--timeout=i"              => \$opts{timeout},
+    "--pid-dir=s"              => \$opts{pid_dir},
+    "--on-multiple-instance=s" => \$opts{on_multiple_instance},
 );
 
 if ($opts{help} || !@ARGV) {
@@ -32,13 +36,15 @@ Usage: $0 [OPTS] -- [COMMAND ...]
 
 Options:
   --name=S                  Set process name.
-  --single                  Prevent running multiple instances simultaneously.
+  --single-instance         Prevent running multiple instances simultaneously.
   --log-stderr-dir=S        Enable logging of stderr and set log directory.
   --log-stderr-size=N       Set log file size limit, in bytes, default 10MB.
   --log-stderr-histories=N  Set number of rotated log files to keep, default 10.
   --log-stderr-period=S     Enable periodic rotation (daily/monthly/yearly).
   --timeout=N               Set execution time limit, in seconds.
-  --pid-dir=S               Directory to put PID files in, if --single is set.
+  --pid-dir=S               Directory to put PID file, if --single-instance set.
+  --on-multiple-instance=S  Can be set to 'exit' to silently exit when another
+                              instance is already running.
 _
     exit 0;
 }
@@ -46,11 +52,12 @@ _
 require Process::Govern;
 
 my %ga = (
-    command => \@ARGV,
-    name    => $opts{name},
-    single  => $opts{single},
-    pid_dir => $opts{pid_dir},
-    timeout => $opts{timeout},
+    command         => \@ARGV,
+    name            => $opts{name},
+    single_instance => $opts{single_instance},
+    pid_dir         => $opts{pid_dir},
+    timeout         => $opts{timeout},
+    on_multiple_instance => $opts{on_multiple_instance},
 );
 if ($opts{log_stderr_dir}) {
     $ga{log_stderr} = {
@@ -66,6 +73,7 @@ Process::Govern::govern_process(%ga);
 # ABSTRACT: Run child process and govern its various aspects
 # PODNAME: govproc
 
+
 __END__
 =pod
 
@@ -75,7 +83,21 @@ govproc - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.02
+version 0.03
+
+=head1 SYNOPSIS
+
+ % govproc [opts] COMMAND ...
+
+See C<govproc --help> for list of options.
+
+=head1 DESCRIPTION
+
+This script is a command-line interface for L<Process::Govern>.
+
+=head1 SEE ALSO
+
+L<Process::Govern>
 
 =head1 AUTHOR
 
@@ -83,7 +105,7 @@ Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Steven Haryanto.
+This software is copyright (c) 2013 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

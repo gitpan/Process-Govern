@@ -1,10 +1,10 @@
 package Process::Govern;
 
-use 5.010;
+use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.02'; # VERSION
+our $VERSION = '0.03'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
@@ -25,12 +25,18 @@ sub govern_process {
     $name =~ /\A\w+\z/ or die "Invalid name, please use letters/numbers only\n";
 
     my $pid;
-    if ($args{single}) {
+    if ($args{single_instance}) {
         defined($args{pid_dir}) or die "Please specify pid_dir\n";
         require Proc::PID::File;
-        $pid = Proc::PID::File->new(dir=>$args{pid_dir}, name=>$name,
-                                    verify=>1);
-        die "Already running" if $pid->alive;
+        if (Proc::PID::File->running(
+            dir=>$args{pid_dir}, name=>$name, verify=>1)) {
+            if ($args{on_multiple_instance} &&
+                    $args{on_multiple_instance} eq 'exit') {
+                exit 1;
+            } else {
+                die "Process $name already running\n";
+            }
+        }
     }
 
     ###
@@ -57,10 +63,6 @@ sub govern_process {
         $err = sub {
             print STDERR $_[0];
         };
-    }
-
-    if ($pid && $pid->alive) {
-        die "Already running";
     }
 
     my $start_time = time();
@@ -105,11 +107,11 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.02
+version 0.03
 
 =head1 SYNOPSIS
 
-Use command-line utility:
+To use via command-line (in most cases):
 
  % govproc \
        --timeout 3600 \
@@ -118,7 +120,7 @@ Use command-line utility:
        --log-stderr-histories  12 \
    /path/to/myapp
 
-Use directly as Perl module:
+To use directly as Perl module:
 
  use Process::Govern qw(govern_process);
  govern_process(
@@ -135,8 +137,9 @@ Use directly as Perl module:
 =head1 DESCRIPTION
 
 Process::Govern is a child process manager. It is meant to be a convenient
-bundle for functionalities commonly needed when managing a child process. It
-comes with a command-line interface, L<govproc>.
+bundle (a single parent/monitoring process) for functionalities commonly needed
+when managing a child process. It comes with a command-line interface,
+L<govproc>.
 
 Background story: I first created this module to record STDERR output of scripts
 that I run from cron. The scripts already log debugging information using
@@ -145,7 +148,7 @@ L<Log::Any::Adapter::Log4perl>, via L<Log::Any::App>). However, when the scripts
 warn/die, or when the programs that the scripts execute emit messages to STDERR,
 they do not get recorded. Thus, every script is then run through B<govproc>.
 From there, B<govproc> naturally gets additional features like timeout,
-preventing running multiple instances, only running single instance, and so on.
+preventing running multiple instances, and so on.
 
 Currently the following governing functionalities are available:
 
@@ -240,23 +243,37 @@ also passed to File::Write::Rotate's constructor), C<histories> (INT, also
 passed to File::Write::Rotate's constructor), C<period> (STR, also passed to
 File::Write::Rotate's constructor).
 
-=item * single => BOOL
+=item * single_instance => BOOL
 
 If set to true, will prevent running multiple instances simultaneously.
-Implemented using L<Proc::PID::File>. You will also have to set C<pid_dir>.
+Implemented using L<Proc::PID::File>. You will also normally have to set
+C<pid_dir>, unless your script runs as root, in which case you can use the
+default C</var/log>.
 
-=item * pid_dir => STR
+=item * pid_dir => STR (default: /var/log)
 
-Directory to put PID file in. Relevant if C<single> is set to true. Default to
-C</var/log>.
+Directory to put PID file in. Relevant if C<single> is set to true.
+
+=item * on_multiple_instance => STR
+
+Can be set to 'exit' to silently exit when there is already a running instance.
+Otherwise, will print an error message 'Program <NAME> already running'.
 
 =back
 
 =head1 FAQ
 
+=head2 Why use Process::Govern?
+
+The main feature this module offers is convenience: it creates a single parent
+process to monitor child process. This fact is more pronounced when you need to
+monitor lots of child processes. If you use, on the other hand, use separate
+parent/monitoring process for timeout and then a separate one for CPU watching,
+and so on, there will potentially be a lot more processes running on the system.
+
 =head1 CAVEATS
 
-Not tested on Win32.
+Not yet tested on Win32.
 
 =head1 SEE ALSO
 
@@ -274,7 +291,7 @@ djb's B<supervise>, http://cr.yp.to/daemontools/supervise.html
 
 B<loadwatch>
 
-cPanel also include a program called B<cpuwatch>.
+cPanel also includes a program called B<cpuwatch>.
 
 =item * Preventing multiple instances of program running simultaneously
 
@@ -303,7 +320,7 @@ Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2012 by Steven Haryanto.
+This software is copyright (c) 2013 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
