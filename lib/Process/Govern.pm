@@ -4,13 +4,17 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.03'; # VERSION
+our $VERSION = '0.04'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
 
+use Time::HiRes qw(sleep);
+
 sub govern_process {
     my %args = @_;
+
+    my $debug = $ENV{DEBUG};
 
     my $cmd = $args{command};
     defined($cmd) or die "Please specify command\n";
@@ -67,7 +71,20 @@ sub govern_process {
 
     my $start_time = time();
     require IPC::Run;
+    say "D:Starting program $name ..." if $debug;
     my $h = IPC::Run::start($cmd, \*STDIN, $out, $err);
+
+    local $SIG{INT} = sub {
+        say "D:Received INT signal" if $debug;
+        $h->kill_kill;
+        exit 1;
+    };
+
+    local $SIG{TERM} = sub {
+        say "D:Received TERM signal" if $debug;
+        $h->kill_kill;
+        exit 1;
+    };
 
     my $res;
     my $time;
@@ -77,9 +94,11 @@ sub govern_process {
             $res = $h->result;
             last;
         }
-        unless ($h->pump_nb) {
-            sleep 1; # XXX sleep in finer granularity
-        }
+
+        # XXX this is not ideal, but pumb_nb always returns true?
+        $h->pump_nb;
+        sleep 0.1;
+
         if (defined $args{timeout}) {
             my $time = time();
             if ($time - $start_time >= $args{timeout}) {
@@ -107,7 +126,7 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.03
+version 0.04
 
 =head1 SYNOPSIS
 
