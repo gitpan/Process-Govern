@@ -6,7 +6,9 @@ use warnings;
 
 use Getopt::Long;
 
-our $VERSION = '0.05'; # VERSION
+our $VERSION = '0.06'; # VERSION
+
+my @SAVE_ARGV = @ARGV;
 
 my %opts = (
     log_stderr_size      => 10*1024*1024,
@@ -67,6 +69,11 @@ if ($opts{log_stderr_dir}) {
         period    => $opts{log_stderr_period},
     };
 }
+
+# show nicer text in 'ps', instead of '/usr/bin/perl /usr/local/bin/govprov
+# --opt CMD --cmdopt', show 'govproc --opt'
+$0 = "govproc" . " " . join(" ", @SAVE_ARGV[0..(@SAVE_ARGV-@ARGV-1)]);
+
 Process::Govern::govern_process(%ga);
 
 1;
@@ -83,7 +90,7 @@ govproc - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.05
+version 0.06
 
 =head1 SYNOPSIS
 

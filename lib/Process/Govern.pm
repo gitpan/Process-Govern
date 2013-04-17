@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.05'; # VERSION
+our $VERSION = '0.06'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
@@ -36,9 +36,10 @@ sub govern_process {
             dir=>$args{pid_dir}, name=>$name, verify=>1)) {
             if ($args{on_multiple_instance} &&
                     $args{on_multiple_instance} eq 'exit') {
-                exit 1;
+                exit 202;
             } else {
-                die "Program $name already running\n";
+                warn "Program $name already running\n";
+                exit 202;
             }
         }
     }
@@ -128,7 +129,7 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.05
+version 0.06
 
 =head1 SYNOPSIS
 
@@ -222,6 +223,22 @@ Inspiration: djb's B<tcpserver>.
 =back
 
 =for Pod::Coverage ^(new)$
+
+=head1 EXIT CODES
+
+Below is the list of exit codes that Process::Govern uses:
+
+=over
+
+=item * 201
+
+Timeout.
+
+=item * 202
+
+Another instance is already running (when C<single_instance> option is true).
+
+=back
 
 =head1 FUNCTIONS
 

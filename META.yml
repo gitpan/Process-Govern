@@ -21,4 +21,4 @@ requires:
 resources:
   homepage: http://metacpan.org/release/Process-Govern
   repository: http://github.com/sharyanto/perl-Process-Govern
-version: 0.05
+version: 0.06
