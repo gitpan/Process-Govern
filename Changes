@@ -1,5 +1,11 @@
 Revision history for Process-Govern
 
+0.05     2013-04-17 (SHARYANTO)
+
+         - Change pump() loop from using 'sleep 0.1' to using timeout(1) object,
+           which is more proper.
+
+
 0.04     2013-04-17 (SHARYANTO)
 
          [BUG FIXES]
@@ -7,7 +13,7 @@ Revision history for Process-Govern
          - Install TERM handler (and INT) to kill child.
 
          - Add temporary workaround for 'unless ($h->pump_nb) { sleep 1 }' not
-           working, by using 'sleep 0.1'.
+           working (causes busy loop), by using 'sleep 0.1'.
 
 
 0.03     2013-04-17 (SHARYANTO)

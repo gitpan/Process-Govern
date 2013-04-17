@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.04'; # VERSION
+our $VERSION = '0.05'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
@@ -38,7 +38,7 @@ sub govern_process {
                     $args{on_multiple_instance} eq 'exit') {
                 exit 1;
             } else {
-                die "Process $name already running\n";
+                die "Program $name already running\n";
             }
         }
     }
@@ -53,10 +53,10 @@ sub govern_process {
     my $fwr;
     if ($args{log_stderr}) {
         require File::Write::Rotate;
-        my %fa = %{$args{log_stderr}};
-        $fa{dir}    //= "/var/log";
-        $fa{prefix}   = $name;
-        $fwr = File::Write::Rotate->new(%fa);
+        my %fwrargs = %{$args{log_stderr}};
+        $fwrargs{dir}    //= "/var/log";
+        $fwrargs{prefix}   = $name;
+        $fwr = File::Write::Rotate->new(%fwrargs);
         $err = sub {
             print STDERR $_[0];
             # XXX prefix with timestamp, how long script starts,
@@ -72,7 +72,9 @@ sub govern_process {
     my $start_time = time();
     require IPC::Run;
     say "D:Starting program $name ..." if $debug;
-    my $h = IPC::Run::start($cmd, \*STDIN, $out, $err);
+    my $to = IPC::Run::timeout(1);
+    my $h  = IPC::Run::start($cmd, \*STDIN, $out, $err, $to)
+        or die "Can't start program: $?\n";
 
     local $SIG{INT} = sub {
         say "D:Received INT signal" if $debug;
@@ -95,14 +97,14 @@ sub govern_process {
             last;
         }
 
-        # XXX this is not ideal, but pumb_nb always returns true?
-        $h->pump_nb;
-        sleep 0.1;
+        eval { $h->pump };
+        my $everr = $@;
+        die $everr if $everr && $everr !~ /^IPC::Run: timeout/;
 
         if (defined $args{timeout}) {
             my $time = time();
             if ($time - $start_time >= $args{timeout}) {
-                $err->("Timeout ($args{timeout}s), killing process ...\n");
+                $err->("Timeout ($args{timeout}s), killing child ...\n");
                 $h->kill_kill;
                 # mark with a special exit code that it's a timeout
                 $res = 201;
@@ -126,7 +128,7 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.04
+version 0.05
 
 =head1 SYNOPSIS
 
