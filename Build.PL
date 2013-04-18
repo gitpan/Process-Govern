@@ -17,7 +17,7 @@ my %module_build_args = (
     "Steven Haryanto <stevenharyanto\@gmail.com>"
   ],
   "dist_name" => "Process-Govern",
-  "dist_version" => "0.06",
+  "dist_version" => "0.07",
   "license" => "perl",
   "module_name" => "Process::Govern",
   "recommends" => {},
@@ -26,6 +26,7 @@ my %module_build_args = (
     "File::Write::Rotate" => "0.07",
     "IPC::Run" => "0.90",
     "Proc::PID::File" => "1.27",
+    "Sys::LoadAvg" => "0.03",
     "perl" => "5.010001"
   },
   "script_files" => [

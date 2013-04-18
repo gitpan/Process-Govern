@@ -2,7 +2,7 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.06
+    version 0.07
 
 SYNOPSIS
     To use via command-line (in most cases):
@@ -52,6 +52,8 @@ DESCRIPTION
 
     *   preventing multiple instances from running simultaneously
 
+    *   load watch
+
     In the future the following features are also planned or contemplated:
 
     *   CPU time limit
@@ -63,8 +65,6 @@ DESCRIPTION
 
     *   other resource usage limit
 
-    *   loadwatch-like functionality (pause when system load is too high)
-
     *   fork/start multiple processes
 
     *   autorestart on die/failure
@@ -73,7 +73,7 @@ DESCRIPTION
 
     *   set I/O nice level (scheduling priority/class)
 
-    *   limit STDIN input, STDOUT output?
+    *   limit STDIN input, STDOUT/STDERR output?
 
     *   trap/handle some signals for the child process?
 
@@ -157,6 +157,30 @@ FUNCTIONS
         running instance. Otherwise, will print an error message 'Program
         <NAME> already running'.
 
+    *   load_watch => BOOL (default: 0)
+
+        If set to 1, enable load watching. Program will be suspended when
+        system load is too high and resumed if system load returns to a
+        lower limit.
+
+    *   load_high_limit => INT|CODE (default: 1.25)
+
+        Limit above which program should be suspended, if load watching is
+        enabled. If integer, will be compared against Sys::LoadAvg's
+        LOADAVG_1MIN value. Alternatively, you can provide a custom routine
+        here, code should return true if load is considered too high.
+
+    *   load_low_limit => INT|CODE (default: 0.25)
+
+        Limit below which program should resume, if load watching is
+        enabled. If integer, will be compared against Sys::LoadAvg's
+        LOADAVG_1MIN value. Alternatively, you can provide a custom routine
+        here, code should return true if load is considered low.
+
+    *   load_check_every => INT (default: 10)
+
+        Frequency of load checking, in seconds.
+
 FAQ
   Why use Process::Govern?
     The main feature this module offers is convenience: it creates a single
@@ -180,7 +204,8 @@ SEE ALSO
 
     *   Pausing under high system load
 
-        loadwatch
+        loadwatch. This program also has the ability to run N copies of
+        program and interactively control stopping/resuming via Unix socket.
 
         cPanel also includes a program called cpuwatch.
 
