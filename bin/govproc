@@ -5,19 +5,20 @@ use strict;
 use warnings;
 
 use Getopt::Long;
+use Process::Govern;
 
-our $VERSION = '0.07'; # VERSION
+our $VERSION = '0.08'; # VERSION
 
 my @SAVE_ARGV = @ARGV;
 
 my %opts = (
     log_stderr_size      => 10*1024*1024,
     log_stderr_histories => 10,
-    pid_dir              => "/var/run",
 );
 Getopt::Long::Configure("no_permute");
 GetOptions(
-    "help"                   => \$opts{help},
+    "help|h|?"               => \$opts{-help},
+    "version|v"              => \$opts{-version},
 
     "name|n=s"               => \$opts{name},
     "single-instance"        => \$opts{single_instance},
@@ -34,11 +35,14 @@ GetOptions(
     "load-every=i"           => sub { $opts{load_watch} = 1; $opts{load_check_every} = $_[1] },
 );
 
-if ($opts{help} || !@ARGV) {
+if ($opts{-version}) {
+    say "govproc version ", ($Process::Govern::VERSION // "?");
+    exit 0;
+} elsif ($opts{-help} || !@ARGV) {
     print <<_;
 Run child process and govern its various aspects
 
-Usage: $0 [OPTS] -- [COMMAND ...]
+Usage: govproc [OPTS] -- [COMMAND ...]
 
 Options:
   --name=S                  Set process name.
@@ -60,8 +64,6 @@ Options:
 _
     exit 0;
 }
-
-require Process::Govern;
 
 my %ga = (
     command         => \@ARGV,
@@ -106,7 +108,7 @@ govproc - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.07
+version 0.08
 
 =head1 SYNOPSIS
 

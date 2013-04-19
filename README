@@ -2,7 +2,7 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.07
+    version 0.08
 
 SYNOPSIS
     To use via command-line (in most cases):
@@ -145,9 +145,9 @@ FUNCTIONS
         If set to true, will prevent running multiple instances
         simultaneously. Implemented using Proc::PID::File. You will also
         normally have to set "pid_dir", unless your script runs as root, in
-        which case you can use the default "/var/log".
+        which case you can use the default "/var/run".
 
-    *   pid_dir => STR (default: /var/log)
+    *   pid_dir => STR (default: /var/run)
 
         Directory to put PID file in. Relevant if "single" is set to true.
 
