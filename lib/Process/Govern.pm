@@ -4,10 +4,12 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.08'; # VERSION
+our $VERSION = '0.09'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
+
+our %SPEC;
 
 use Time::HiRes qw(sleep);
 
@@ -37,9 +39,63 @@ sub _kill {
     my $h = $self->{h};
     $self->_resume if $self->{suspended};
     say "D:Killing program ..." if $self->{debug};
+    $self->{restart} = 0;
     $h->kill_kill;
 }
 
+$SPEC{govern_process} = {
+    v => 1.1,
+    args => {
+        name => {
+            schema => 'str*',
+        },
+        command => {
+            schema => ['any*' => of => ['str*', ['array*' => of => 'str*']]],
+            req => 1,
+        },
+        single_instance => {
+            schema => [bool => default => 0],
+        },
+        on_multiple_instance => {
+            schema => ['str*' => in => ['exit']],
+        },
+        load_watch => {
+            schema => [bool => default => 0],
+        },
+        load_check_every => {
+            schema => [int => default => 10],
+        },
+        load_high_limit => {
+            schema => ['any*' => of => [[int => default => 1.25], 'code*']],
+        },
+        load_low_limit => {
+            schema => ['any*' => of => [[int => default => 0.25], 'code*']],
+        },
+        log_stderr => {
+            summary => 'Will be passed as arguments to File::Write::Rotate',
+            schema => ['hash*' => keys => {
+                dir       => 'str*',
+                size      => 'str*',
+                histories => 'int*',
+            }],
+        },
+        timeout => {
+            schema => ['int*'],
+        },
+        restart => {
+            schema => [bool => default => 1],
+        },
+        # not yet defined
+        #restart_delay => {
+        #    schema => [int => default => 0],
+        #},
+        #check_alive => {
+        #    # not yet defined, can supply a custom coderef, or specify some
+        #    # standard checks like TCP/UDP connection to some port, etc.
+        #    schema => 'any*',
+        #},
+    },
+};
 sub govern_process {
     my $self;
     if (ref $_[0]) {
@@ -112,14 +168,21 @@ sub govern_process {
         };
     }
 
-    my $start_time = time();
-    require IPC::Run;
-    say "D:Starting program $name ..." if $debug;
-    my $to = IPC::Run::timeout(1);
-    #$self->{to} = $to;
-    my $h  = IPC::Run::start($cmd, \*STDIN, $out, $err, $to)
-        or die "Can't start program: $?\n";
-    $self->{h} = $h;
+    my $start_time; # for timeout
+    my ($to, $h);
+
+    my $do_start = sub {
+        $start_time = time();
+        require IPC::Run;
+        say "D:(Re)starting program $name ..." if $debug;
+        $to = IPC::Run::timeout(1);
+        #$self->{to} = $to;
+        $h  = IPC::Run::start($cmd, \*STDIN, $out, $err, $to)
+            or die "Can't start program: $?\n";
+        $self->{h} = $h;
+    };
+
+    $do_start->();
 
     local $SIG{INT} = sub {
         say "D:Received INT signal" if $debug;
@@ -132,6 +195,17 @@ sub govern_process {
         $self->_kill;
         exit 1;
     };
+
+    my $chld_handler;
+    $self->{restart} = $args{restart};
+    $chld_handler = sub {
+        $SIG{CHLD} = $chld_handler;
+        if ($self->{restart}) {
+            say "D:Child died" if $debug;
+            $do_start->();
+        }
+    };
+    local $SIG{CHLD} = $chld_handler if $args{restart};
 
     my $res;
     my $lastlw_time;
@@ -216,7 +290,7 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.08
+version 0.09
 
 =head1 SYNOPSIS
 
@@ -236,7 +310,7 @@ To use directly as Perl module:
      name       => 'myapp',
      command    => '/path/to/myapp',
      timeout    => 3600,
-     stderr_log => {
+     log_stderr => {
          dir       => '/var/log/myapp',
          size      => '16M',
          histories => 12,
@@ -271,6 +345,8 @@ Currently the following governing functionalities are available:
 
 =item * load watch
 
+=item * autorestart
+
 =back
 
 In the future the following features are also planned or contemplated:
@@ -286,8 +362,6 @@ With an option to autorestart if process' memory size grow out of limit.
 =item * other resource usage limit
 
 =item * fork/start multiple processes
-
-=item * autorestart on die/failure
 
 =item * set (CPU) nice level
 
@@ -337,7 +411,7 @@ Known arguments (required argument is marked with C<*>):
 
 =over
 
-=item * command* => STR | ARRAYREF | CODE
+=item * command* => STR | ARRAYREF
 
 Program to run. Passed to IPC::Run's C<start()>.
 
@@ -407,7 +481,13 @@ load is considered low.
 
 Frequency of load checking, in seconds.
 
+=item * restart => BOOL (default: 0)
+
+If set to true, do restart.
+
 =back
+
+Planned arguments: restart_delay, check_alive.
 
 =head1 FAQ
 

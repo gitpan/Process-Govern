@@ -7,7 +7,7 @@ use warnings;
 use Getopt::Long;
 use Process::Govern;
 
-our $VERSION = '0.08'; # VERSION
+our $VERSION = '0.09'; # VERSION
 
 my @SAVE_ARGV = @ARGV;
 
@@ -22,6 +22,7 @@ GetOptions(
 
     "name|n=s"               => \$opts{name},
     "single-instance"        => \$opts{single_instance},
+    "restart"                => \$opts{restart},
     "log-stderr-dir=s"       => \$opts{log_stderr_dir},
     "log-stderr-size=i"      => \$opts{log_stderr_size},
     "log-stderr-histories=i" => \$opts{log_stderr_histories},
@@ -69,6 +70,7 @@ my %ga = (
     command         => \@ARGV,
     name            => $opts{name},
     single_instance => $opts{single_instance},
+    restart         => $opts{restart},
     pid_dir         => $opts{pid_dir},
     timeout         => $opts{timeout},
     on_multiple_instance => $opts{on_multiple_instance},
@@ -108,7 +110,7 @@ govproc - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.08
+version 0.09
 
 =head1 SYNOPSIS
 

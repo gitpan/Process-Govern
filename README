@@ -2,7 +2,7 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.08
+    version 0.09
 
 SYNOPSIS
     To use via command-line (in most cases):
@@ -21,7 +21,7 @@ SYNOPSIS
          name       => 'myapp',
          command    => '/path/to/myapp',
          timeout    => 3600,
-         stderr_log => {
+         log_stderr => {
              dir       => '/var/log/myapp',
              size      => '16M',
              histories => 12,
@@ -54,6 +54,8 @@ DESCRIPTION
 
     *   load watch
 
+    *   autorestart
+
     In the future the following features are also planned or contemplated:
 
     *   CPU time limit
@@ -66,8 +68,6 @@ DESCRIPTION
     *   other resource usage limit
 
     *   fork/start multiple processes
-
-    *   autorestart on die/failure
 
     *   set (CPU) nice level
 
@@ -106,7 +106,7 @@ FUNCTIONS
     the child process. Known arguments (required argument is marked with
     "*"):
 
-    *   command* => STR | ARRAYREF | CODE
+    *   command* => STR | ARRAYREF
 
         Program to run. Passed to IPC::Run's "start()".
 
@@ -180,6 +180,12 @@ FUNCTIONS
     *   load_check_every => INT (default: 10)
 
         Frequency of load checking, in seconds.
+
+    *   restart => BOOL (default: 0)
+
+        If set to true, do restart.
+
+    Planned arguments: restart_delay, check_alive.
 
 FAQ
   Why use Process::Govern?
