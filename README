@@ -2,7 +2,7 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.11
+    version 0.12
 
 SYNOPSIS
     To use via command-line (in most cases):

@@ -57,7 +57,7 @@
          "web" : "https://github.com/sharyanto/perl-Process-Govern"
       }
    },
-   "version" : "0.11",
+   "version" : "0.12",
    "x_Dist_Zilla" : {
       "perl" : {
          "version" : "5.018002"

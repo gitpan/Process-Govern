@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.11'; # VERSION
+our $VERSION = '0.12'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
@@ -327,7 +327,7 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.11
+version 0.12
 
 =head1 SYNOPSIS
 
