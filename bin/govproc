@@ -7,7 +7,7 @@ use warnings;
 use Getopt::Long;
 use Process::Govern;
 
-our $VERSION = '0.09'; # VERSION
+our $VERSION = '0.10'; # VERSION
 
 my @SAVE_ARGV = @ARGV;
 
@@ -48,6 +48,7 @@ Usage: govproc [OPTS] -- [COMMAND ...]
 Options:
   --name=S                  Set process name.
   --single-instance         Prevent running multiple instances simultaneously.
+  --restart                 Restart when child process dies/exits.
   --log-stderr-dir=S        Enable logging of stderr and set log directory.
   --log-stderr-size=N       Set log file size limit, in bytes, default 10MB.
   --log-stderr-histories=N  Set number of rotated log files to keep, default 10.
@@ -94,15 +95,17 @@ if ($opts{load_watch}) {
 # --opt CMD --cmdopt', show 'govproc --opt'
 $0 = "govproc" . " " . join(" ", @SAVE_ARGV[0..(@SAVE_ARGV-@ARGV-1)]);
 
-Process::Govern::govern_process(%ga);
+exit Process::Govern::govern_process(%ga);
 
 1;
 # ABSTRACT: Run child process and govern its various aspects
 # PODNAME: govproc
 
-
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -110,7 +113,7 @@ govproc - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.09
+version 0.10
 
 =head1 SYNOPSIS
 
@@ -126,16 +129,31 @@ This script is a command-line interface for L<Process::Govern>.
 
 L<Process::Govern>
 
+=head1 HOMEPAGE
+
+Please visit the project's homepage at L<https://metacpan.org/release/Process-Govern>.
+
+=head1 SOURCE
+
+Source repository is at L<https://github.com/sharyanto/perl-Process-Govern>.
+
+=head1 BUGS
+
+Please report any bugs or feature requests on the bugtracker website L<https://rt.cpan.org/Public/Dist/Display.html?Name=Process-Govern>
+
+When submitting a bug or request, please include a test-file or a
+patch to an existing test-file that illustrates the bug or desired
+feature.
+
 =head1 AUTHOR
 
 Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by Steven Haryanto.
+This software is copyright (c) 2014 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

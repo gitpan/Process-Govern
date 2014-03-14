@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.09'; # VERSION
+our $VERSION = '0.10'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
@@ -95,6 +95,7 @@ $SPEC{govern_process} = {
         #    schema => 'any*',
         #},
     },
+    result_naked => 1,
 };
 sub govern_process {
     my $self;
@@ -109,6 +110,8 @@ sub govern_process {
 
     my $debug = $ENV{DEBUG};
     $self->{debug} = $debug;
+
+    my $exitcode;
 
     my $cmd = $args{command};
     defined($cmd) or die "Please specify command\n";
@@ -129,10 +132,10 @@ sub govern_process {
         if (Proc::PID::File->running(dir=>$pid_dir, name=>$name, verify=>1)) {
             if ($args{on_multiple_instance} &&
                     $args{on_multiple_instance} eq 'exit') {
-                exit 202;
+                $exitcode = 202; goto EXIT;
             } else {
                 warn "Program $name already running\n";
-                exit 202;
+                $exitcode = 202; goto EXIT;
             }
         }
     }
@@ -207,7 +210,6 @@ sub govern_process {
     };
     local $SIG{CHLD} = $chld_handler if $args{restart};
 
-    my $res;
     my $lastlw_time;
 
   MAIN_LOOP:
@@ -219,7 +221,7 @@ sub govern_process {
 
             unless ($h->pumpable) {
                 $h->finish;
-                $res = $h->result;
+                $exitcode = $h->result;
                 last MAIN_LOOP;
             }
 
@@ -236,7 +238,7 @@ sub govern_process {
                 $err->("Timeout ($args{timeout}s), killing child ...\n");
                 $self->_kill;
                 # mark with a special exit code that it's a timeout
-                $res = 201;
+                $exitcode = 124;
                 last MAIN_LOOP;
             }
         }
@@ -273,16 +275,20 @@ sub govern_process {
             $lastlw_time = $now;
         }
 
-    }
-    exit $res;
+    } # MAINLOOP
+
+  EXIT:
+    return $exitcode || 0;
 }
 
 1;
 # ABSTRACT: Run child process and govern its various aspects
 
-
 __END__
+
 =pod
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -290,7 +296,7 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.09
+version 0.10
 
 =head1 SYNOPSIS
 
@@ -391,9 +397,9 @@ Below is the list of exit codes that Process::Govern uses:
 
 =over
 
-=item * 201
+=item * 124
 
-Timeout.
+Timeout. The exit code is also used by B<timeout>.
 
 =item * 202
 
@@ -403,7 +409,7 @@ Another instance is already running (when C<single_instance> option is true).
 
 =head1 FUNCTIONS
 
-=head2 govern_process(%args)
+=head2 govern_process(%args) => INT
 
 Run child process and govern its various aspects. It basically uses L<IPC::Run>
 and a loop to check various conditions during the lifetime of the child process.
@@ -417,8 +423,9 @@ Program to run. Passed to IPC::Run's C<start()>.
 
 =item * name => STRING
 
-Should match regex C</\A\w+\z/>. Used in several ways, e.g. passed as C<prefix>
-in L<File::Write::Rotate>'s constructor as well as used as name of PID file.
+Should match regex C</\A\w+\z/>. Used in several places, e.g. passed as
+C<prefix> in L<File::Write::Rotate>'s constructor as well as used as name of PID
+file.
 
 If not given, will be taken from command.
 
@@ -430,7 +437,7 @@ some processes still survive, they are sent the KILL signal.
 
 The killing is implemented using L<IPC::Run>'s C<kill_kill()>.
 
-Upon timeout, exit code is set to 201.
+Upon timeout, exit code is set to 124.
 
 =item * log_stderr => HASH
 
@@ -489,19 +496,105 @@ If set to true, do restart.
 
 Planned arguments: restart_delay, check_alive.
 
+Return value: command exit code.
+
+
+=head2 govern_process(%args) -> any
+
+Arguments ('*' denotes required arguments):
+
+=over 4
+
+=item * B<command>* => I<array|str>
+
+=item * B<load_check_every> => I<int> (default: 10)
+
+=item * B<load_high_limit> => I<code|int>
+
+=item * B<load_low_limit> => I<code|int>
+
+=item * B<load_watch> => I<bool> (default: 0)
+
+=item * B<log_stderr> => I<hash>
+
+Will be passed as arguments to File::Write::Rotate.
+
+=item * B<name> => I<str>
+
+=item * B<on_multiple_instance> => I<str>
+
+=item * B<restart> => I<bool> (default: 1)
+
+=item * B<single_instance> => I<bool> (default: 0)
+
+=item * B<timeout> => I<int>
+
+=back
+
+Return value:
+
 =head1 FAQ
 
 =head2 Why use Process::Govern?
 
 The main feature this module offers is convenience: it creates a single parent
 process to monitor child process. This fact is more pronounced when you need to
-monitor lots of child processes. If you use, on the other hand, use separate
+monitor lots of child processes. If you use, on the other hand, separate
 parent/monitoring process for timeout and then a separate one for CPU watching,
 and so on, there will potentially be a lot more processes running on the system.
+Compare for example:
+
+ % govproc --timeout 10 --load-watch CMD
+
+which only creates one monitoring process, versus:
+
+ % timeout 10s loadwatch CMD
+
+which will create two parent processes (three actually, B<loadwatch> apparently
+forks first).
 
 =head1 CAVEATS
 
 Not yet tested on Win32.
+
+=head1 TODO
+
+=over
+
+=item * Govern multiple processes instead of just one.
+
+It's only natural that we expand to this, to reduce the number of monitor
+process.
+
+We want to be able to set options for all processes or on a per-process basis.
+For example: when load watching, all processes can be stopped and resumed using
+the same high/load criteria, but some processes might want to have a different
+criteria. The same goes with timeout.
+
+Some options are for a per-process, e.g. capturing stderr.
+
+If we support multiple commands, e.g. C<< commands => ['cmd1', ['cmd2', 'arg']]
+>> then we'll also need to return exit codes for each command, e.g. C<< [0, 124]
+>>.
+
+We should exit only after all child processes terminate. But when a child exits,
+a hook can be defined e.g. C<on_child_exit>.
+
+=item * Allow specifying time point (instead of duration) for timeout?
+
+For example, we might want to say "this command should not run past midnight".
+
+In general, we might also want to allow specifying a coderef for flexible
+timeout criteria?
+
+=item * Print messages when stopping/resuming due to load control.
+
+Like B<loadwatch> does:
+
+ Fri Mar 14 16:17:52 2014: load too high, stopping.
+ Fri Mar 14 16:18:52 2014: load low, continuing.
+
+=back
 
 =head1 SEE ALSO
 
@@ -528,6 +621,8 @@ L<Proc::PID::File>, L<Sys::RunAlone>
 
 =item * Execution time limit
 
+B<timeout>.
+
 alarm() (but alarm() cannot be used to timeout external programs started by
 system()/backtick).
 
@@ -543,16 +638,31 @@ Although not really related, L<Perinci::Sub::Wrapper>. This module also bundles
 functionalities like timeout, retries, argument validation, etc into a single
 function wrapper.
 
+=head1 HOMEPAGE
+
+Please visit the project's homepage at L<https://metacpan.org/release/Process-Govern>.
+
+=head1 SOURCE
+
+Source repository is at L<https://github.com/sharyanto/perl-Process-Govern>.
+
+=head1 BUGS
+
+Please report any bugs or feature requests on the bugtracker website L<https://rt.cpan.org/Public/Dist/Display.html?Name=Process-Govern>
+
+When submitting a bug or request, please include a test-file or a
+patch to an existing test-file that illustrates the bug or desired
+feature.
+
 =head1 AUTHOR
 
 Steven Haryanto <stevenharyanto@gmail.com>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2013 by Steven Haryanto.
+This software is copyright (c) 2014 by Steven Haryanto.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.
 
 =cut
-

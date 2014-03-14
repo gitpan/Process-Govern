@@ -2,7 +2,7 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.09
+    version 0.10
 
 SYNOPSIS
     To use via command-line (in most cases):
@@ -90,9 +90,9 @@ DESCRIPTION
 EXIT CODES
     Below is the list of exit codes that Process::Govern uses:
 
-    *   201
+    *   124
 
-        Timeout.
+        Timeout. The exit code is also used by timeout.
 
     *   202
 
@@ -100,7 +100,7 @@ EXIT CODES
         is true).
 
 FUNCTIONS
-  govern_process(%args)
+  govern_process(%args) => INT
     Run child process and govern its various aspects. It basically uses
     IPC::Run and a loop to check various conditions during the lifetime of
     the child process. Known arguments (required argument is marked with
@@ -112,8 +112,8 @@ FUNCTIONS
 
     *   name => STRING
 
-        Should match regex "/\A\w+\z/". Used in several ways, e.g. passed as
-        "prefix" in File::Write::Rotate's constructor as well as used as
+        Should match regex "/\A\w+\z/". Used in several places, e.g. passed
+        as "prefix" in File::Write::Rotate's constructor as well as used as
         name of PID file.
 
         If not given, will be taken from command.
@@ -127,7 +127,7 @@ FUNCTIONS
 
         The killing is implemented using IPC::Run's "kill_kill()".
 
-        Upon timeout, exit code is set to 201.
+        Upon timeout, exit code is set to 124.
 
     *   log_stderr => HASH
 
@@ -187,17 +187,93 @@ FUNCTIONS
 
     Planned arguments: restart_delay, check_alive.
 
+    Return value: command exit code.
+
+  govern_process(%args) -> any
+    Arguments ('*' denotes required arguments):
+
+    *   command* => *array|str*
+
+    *   load_check_every => *int* (default: 10)
+
+    *   load_high_limit => *code|int*
+
+    *   load_low_limit => *code|int*
+
+    *   load_watch => *bool* (default: 0)
+
+    *   log_stderr => *hash*
+
+        Will be passed as arguments to File::Write::Rotate.
+
+    *   name => *str*
+
+    *   on_multiple_instance => *str*
+
+    *   restart => *bool* (default: 1)
+
+    *   single_instance => *bool* (default: 0)
+
+    *   timeout => *int*
+
+    Return value:
+
 FAQ
   Why use Process::Govern?
     The main feature this module offers is convenience: it creates a single
     parent process to monitor child process. This fact is more pronounced
     when you need to monitor lots of child processes. If you use, on the
-    other hand, use separate parent/monitoring process for timeout and then
-    a separate one for CPU watching, and so on, there will potentially be a
-    lot more processes running on the system.
+    other hand, separate parent/monitoring process for timeout and then a
+    separate one for CPU watching, and so on, there will potentially be a
+    lot more processes running on the system. Compare for example:
+
+     % govproc --timeout 10 --load-watch CMD
+
+    which only creates one monitoring process, versus:
+
+     % timeout 10s loadwatch CMD
+
+    which will create two parent processes (three actually, loadwatch
+    apparently forks first).
 
 CAVEATS
     Not yet tested on Win32.
+
+TODO
+    *   Govern multiple processes instead of just one.
+
+        It's only natural that we expand to this, to reduce the number of
+        monitor process.
+
+        We want to be able to set options for all processes or on a
+        per-process basis. For example: when load watching, all processes
+        can be stopped and resumed using the same high/load criteria, but
+        some processes might want to have a different criteria. The same
+        goes with timeout.
+
+        Some options are for a per-process, e.g. capturing stderr.
+
+        If we support multiple commands, e.g. "commands => ['cmd1', ['cmd2',
+        'arg']]" then we'll also need to return exit codes for each command,
+        e.g. "[0, 124]".
+
+        We should exit only after all child processes terminate. But when a
+        child exits, a hook can be defined e.g. "on_child_exit".
+
+    *   Allow specifying time point (instead of duration) for timeout?
+
+        For example, we might want to say "this command should not run past
+        midnight".
+
+        In general, we might also want to allow specifying a coderef for
+        flexible timeout criteria?
+
+    *   Print messages when stopping/resuming due to load control.
+
+        Like loadwatch does:
+
+         Fri Mar 14 16:17:52 2014: load too high, stopping.
+         Fri Mar 14 16:18:52 2014: load low, continuing.
 
 SEE ALSO
     Process::Govern attempts (or will attempt, some day) to provide the
@@ -221,6 +297,8 @@ SEE ALSO
 
     *   Execution time limit
 
+        timeout.
+
         alarm() (but alarm() cannot be used to timeout external programs
         started by system()/backtick).
 
@@ -234,11 +312,26 @@ SEE ALSO
     bundles functionalities like timeout, retries, argument validation, etc
     into a single function wrapper.
 
+HOMEPAGE
+    Please visit the project's homepage at
+    <https://metacpan.org/release/Process-Govern>.
+
+SOURCE
+    Source repository is at
+    <https://github.com/sharyanto/perl-Process-Govern>.
+
+BUGS
+    Please report any bugs or feature requests on the bugtracker website
+    <https://rt.cpan.org/Public/Dist/Display.html?Name=Process-Govern>
+
+    When submitting a bug or request, please include a test-file or a patch
+    to an existing test-file that illustrates the bug or desired feature.
+
 AUTHOR
     Steven Haryanto <stevenharyanto@gmail.com>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2013 by Steven Haryanto.
+    This software is copyright (c) 2014 by Steven Haryanto.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.
