@@ -2,7 +2,7 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.10
+    version 0.11
 
 SYNOPSIS
     To use via command-line (in most cases):
@@ -46,7 +46,7 @@ DESCRIPTION
 
     Currently the following governing functionalities are available:
 
-    *   logging of STDERR output to an autorotated file
+    *   logging of STDOUT & STDERR output to an autorotated file
 
     *   execution time limit
 
@@ -129,6 +129,12 @@ FUNCTIONS
 
         Upon timeout, exit code is set to 124.
 
+    *   show_stderr => BOOL (default: 1)
+
+        Can be used to turn off STDERR output. If you turn this off and set
+        "log_stderr", STDERR output will still be logged but not displayed
+        to screen.
+
     *   log_stderr => HASH
 
         Specify logging for STDERR. Logging will be done using
@@ -139,6 +145,14 @@ FUNCTIONS
         File::Write::Rotate's constructor), "histories" (INT, also passed to
         File::Write::Rotate's constructor), "period" (STR, also passed to
         File::Write::Rotate's constructor).
+
+    *   show_stdout => BOOL (default: 1)
+
+        Just like "show_stdout", but for STDOUT.
+
+    *   log_stdout => HASH
+
+        Just like "log_stderr", but for STDOUT.
 
     *   single_instance => BOOL
 
@@ -206,11 +220,19 @@ FUNCTIONS
 
         Will be passed as arguments to File::Write::Rotate.
 
+    *   log_stdout => *hash*
+
+        Will be passed as arguments to File::Write::Rotate.
+
     *   name => *str*
 
     *   on_multiple_instance => *str*
 
     *   restart => *bool* (default: 1)
+
+    *   show_stderr => *bool* (default: 1)
+
+    *   show_stdout => *bool* (default: 1)
 
     *   single_instance => *bool* (default: 0)
 
@@ -240,7 +262,7 @@ CAVEATS
     Not yet tested on Win32.
 
 TODO
-    *   Govern multiple processes instead of just one.
+    *   Govern multiple processes instead of just one
 
         It's only natural that we expand to this, to reduce the number of
         monitor process.
@@ -268,12 +290,16 @@ TODO
         In general, we might also want to allow specifying a coderef for
         flexible timeout criteria?
 
-    *   Print messages when stopping/resuming due to load control.
+    *   Print messages when stopping/resuming due to load control
 
         Like loadwatch does:
 
          Fri Mar 14 16:17:52 2014: load too high, stopping.
          Fri Mar 14 16:18:52 2014: load low, continuing.
+
+    *   Option to not use File::Write::Rotate for logging STDOUT/STDERR
+
+        If command is output-heavy, FWR will become a significant overhead.
 
 SEE ALSO
     Process::Govern attempts (or will attempt, some day) to provide the

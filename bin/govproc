@@ -7,7 +7,7 @@ use warnings;
 use Getopt::Long;
 use Process::Govern;
 
-our $VERSION = '0.10'; # VERSION
+our $VERSION = '0.11'; # VERSION
 
 my @SAVE_ARGV = @ARGV;
 
@@ -113,7 +113,7 @@ govproc - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.10
+version 0.11
 
 =head1 SYNOPSIS
 

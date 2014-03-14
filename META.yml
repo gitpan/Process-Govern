@@ -26,7 +26,7 @@ resources:
   bugtracker: https://rt.cpan.org/Public/Dist/Display.html?Name=Process-Govern
   homepage: https://metacpan.org/release/Process-Govern
   repository: git://github.com/sharyanto/perl-Process-Govern.git
-version: '0.10'
+version: '0.11'
 x_Dist_Zilla:
   perl:
     version: '5.018002'
