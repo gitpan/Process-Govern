@@ -4,7 +4,7 @@ use 5.010001;
 use strict;
 use warnings;
 
-our $VERSION = '0.12'; # VERSION
+our $VERSION = '0.13'; # VERSION
 
 use Exporter qw(import);
 our @EXPORT_OK = qw(govern_process);
@@ -22,7 +22,16 @@ sub _suspend {
     my $self = shift;
     my $h = $self->{h};
     say "D:Suspending program ..." if $self->{debug};
-    kill STOP => $_->{PID} for @{ $h->{KIDS} };
+    if (@{ $h->{KIDS} }) {
+        my @args = (STOP => (map { $_->{PID} } @{ $h->{KIDS} }));
+        if ($self->{args}{killfam}) {
+            #say "D:killfam ".join(" ", @args) if $self->{debug};
+            Proc::Killfam::killfam(@args);
+        } else {
+            #say "D:kill ".join(" ", @args) if $self->{debug};
+            kill @args;
+        }
+    }
     $self->{suspended} = 1;
 }
 
@@ -30,7 +39,16 @@ sub _resume {
     my $self = shift;
     my $h = $self->{h};
     say "D:Resuming program ..." if $self->{debug};
-    kill CONT => $_->{PID} for @{ $h->{KIDS} };
+    if (@{ $h->{KIDS} }) {
+        my @args = (CONT => (map { $_->{PID} } @{ $h->{KIDS} }));
+        if ($self->{args}{killfam}) {
+            #say "D:killfam ".join(" ", @args) if $self->{debug};
+            Proc::Killfam::killfam(@args);
+        } else {
+            #say "D:kill ".join(" ", @args) if $self->{debug};
+            kill @args;
+        }
+    }
     $self->{suspended} = 0;
 }
 
@@ -71,6 +89,18 @@ $SPEC{govern_process} = {
         load_low_limit => {
             schema => ['any*' => of => [[int => default => 0.25], 'code*']],
         },
+        killfam => {
+            summary => 'Instead of kill, use killfam (kill family of process)',
+            schema  => 'bool',
+            description => <<'_',
+
+This can be useful e.g. to control load more successfully, if the
+load-generating processes are the subchildren of the one we're governing.
+
+This requires `Proc::Killfam` CPAN module, which is installed separately.
+
+_
+        },
         log_stdout => {
             summary => 'Will be passed as arguments to File::Write::Rotate',
             schema => ['hash*' => keys => {
@@ -110,6 +140,10 @@ $SPEC{govern_process} = {
         #},
     },
     result_naked => 1,
+    result => {
+        summary => "Child's exit code",
+        schema => 'int',
+    },
 };
 sub govern_process {
     my $self;
@@ -121,6 +155,8 @@ sub govern_process {
 
     my %args = @_;
     $self->{args} = \%args;
+
+    require Proc::Killfam if $args{killfam};
 
     my $debug = $ENV{DEBUG};
     $self->{debug} = $debug;
@@ -327,7 +363,7 @@ Process::Govern - Run child process and govern its various aspects
 
 =head1 VERSION
 
-version 0.12
+This document describes version 0.13 of Process::Govern (from Perl distribution Process-Govern), released on 2014-09-06.
 
 =head1 SYNOPSIS
 
@@ -543,13 +579,22 @@ Planned arguments: restart_delay, check_alive.
 Return value: command exit code.
 
 
-=head2 govern_process(%args) -> any
+=head2 govern_process(%args) -> int
 
 Arguments ('*' denotes required arguments):
 
 =over 4
 
 =item * B<command>* => I<array|str>
+
+=item * B<killfam> => I<bool>
+
+Instead of kill, use killfam (kill family of process).
+
+This can be useful e.g. to control load more successfully, if the
+load-generating processes are the subchildren of the one we're governing.
+
+This requires C<Proc::Killfam> CPAN module, which is installed separately.
 
 =item * B<load_check_every> => I<int> (default: 10)
 
@@ -584,6 +629,8 @@ Will be passed as arguments to File::Write::Rotate.
 =back
 
 Return value:
+
+Child's exit code (int)
 
 =head1 FAQ
 
@@ -654,6 +701,15 @@ If command is output-heavy, FWR will become a significant overhead.
 
 =head1 SEE ALSO
 
+Process::Govern uses L<IPC::Run> at its core.
+
+L<IPC::Cmd> also uses IPC::Run (as well as L<IPC::Open3> on systems that do not
+have IPC::Run installed or on some archaic systems that do not support IPC::Run)
+and its C<run_forked()> routine also has some of Process::Govern's
+functionalities like capturing stdout and stderr, timeout, hiding (discarding)
+output. If you only need those functionalities, you can use IPC::Cmd as it is a
+core module.
+
 Process::Govern attempts (or will attempt, some day) to provide the
 functionality (or some of the functionality) of the builtins/modules/programs
 listed below:
@@ -712,11 +768,11 @@ feature.
 
 =head1 AUTHOR
 
-Steven Haryanto <stevenharyanto@gmail.com>
+perlancar <perlancar@cpan.org>
 
 =head1 COPYRIGHT AND LICENSE
 
-This software is copyright (c) 2014 by Steven Haryanto.
+This software is copyright (c) 2014 by perlancar@cpan.org.
 
 This is free software; you can redistribute it and/or modify it under
 the same terms as the Perl 5 programming language system itself.

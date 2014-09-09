@@ -2,7 +2,8 @@ NAME
     Process::Govern - Run child process and govern its various aspects
 
 VERSION
-    version 0.12
+    This document describes version 0.13 of Process::Govern (from Perl
+    distribution Process-Govern), released on 2014-09-06.
 
 SYNOPSIS
     To use via command-line (in most cases):
@@ -203,10 +204,21 @@ FUNCTIONS
 
     Return value: command exit code.
 
-  govern_process(%args) -> any
+  govern_process(%args) -> int
     Arguments ('*' denotes required arguments):
 
     *   command* => *array|str*
+
+    *   killfam => *bool*
+
+        Instead of kill, use killfam (kill family of process).
+
+        This can be useful e.g. to control load more successfully, if the
+        load-generating processes are the subchildren of the one we're
+        governing.
+
+        This requires "Proc::Killfam" CPAN module, which is installed
+        separately.
 
     *   load_check_every => *int* (default: 10)
 
@@ -239,6 +251,8 @@ FUNCTIONS
     *   timeout => *int*
 
     Return value:
+
+    Child's exit code (int)
 
 FAQ
   Why use Process::Govern?
@@ -302,6 +316,15 @@ TODO
         If command is output-heavy, FWR will become a significant overhead.
 
 SEE ALSO
+    Process::Govern uses IPC::Run at its core.
+
+    IPC::Cmd also uses IPC::Run (as well as IPC::Open3 on systems that do
+    not have IPC::Run installed or on some archaic systems that do not
+    support IPC::Run) and its "run_forked()" routine also has some of
+    Process::Govern's functionalities like capturing stdout and stderr,
+    timeout, hiding (discarding) output. If you only need those
+    functionalities, you can use IPC::Cmd as it is a core module.
+
     Process::Govern attempts (or will attempt, some day) to provide the
     functionality (or some of the functionality) of the
     builtins/modules/programs listed below:
@@ -354,10 +377,10 @@ BUGS
     to an existing test-file that illustrates the bug or desired feature.
 
 AUTHOR
-    Steven Haryanto <stevenharyanto@gmail.com>
+    perlancar <perlancar@cpan.org>
 
 COPYRIGHT AND LICENSE
-    This software is copyright (c) 2014 by Steven Haryanto.
+    This software is copyright (c) 2014 by perlancar@cpan.org.
 
     This is free software; you can redistribute it and/or modify it under
     the same terms as the Perl 5 programming language system itself.
